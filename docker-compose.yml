@@ -1,8 +1,28 @@
-version: '3.8'
+# ─────────────────────────────────────────────────────────────────────
+#  AI Research Report Agent — Docker Compose
+#
+#  Usage:
+#    docker compose up --build        # Start
+#    docker compose up -d --build     # Start in background
+#    docker compose logs -f agent     # Follow logs
+#    docker compose down              # Stop
+# ─────────────────────────────────────────────────────────────────────
 services:
-  api:
+  agent:
     build: .
+    container_name: research-agent
     ports:
-      - '8000:8000'
+      - "8000:8000"
     env_file:
       - .env
+    volumes:
+      - ./logs:/app/logs
+      - ./reports:/app/reports
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
