@@ -1,24 +1,28 @@
+"""
+OpenAI LLM provider (gpt-4o-mini).
+Fallback provider when Groq is unavailable.
+"""
 from langchain_openai import ChatOpenAI
-from dotenv import load_dotenv
-from app.logger import logging
-from app.exception import MyException
-import sys
-
-load_dotenv()
-
-model = ChatOpenAI(model="gpt-4o")
+from app.llm.base import BaseLLMProvider
+from app.core.config import settings
+from app.utils.logger import logger
+from app.utils.exception import AgentException
 
 
-def generate_with_openai(prompt: str):
-    try:
-        logging.info("OpenAI LLM call started")
+class OpenAIProvider(BaseLLMProvider):
+    name = "OpenAI (gpt-4o-mini)"
 
-        response = model.invoke(prompt)
+    def __init__(self):
+        self._model = ChatOpenAI(
+            model=settings.openai_model,
+            api_key=settings.openai_api_key or None,
+        )
 
-        logging.info("OpenAI response received successfully")
-
-        return response.content
-
-    except Exception as e:
-        logging.error("Error in generate_with_openai", exc_info=True)
-        raise MyException(e, sys)
+    def generate(self, prompt: str) -> str:
+        logger.info("LLM call → %s", self.name)
+        try:
+            response = self._model.invoke(prompt)
+            logger.info("LLM response received ← %s", self.name)
+            return response.content
+        except Exception as e:
+            raise AgentException(e)

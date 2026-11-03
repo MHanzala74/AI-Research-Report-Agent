@@ -1,22 +1,30 @@
-from app.llm.openai_provider import generate_with_openai
-from app.llm.groq_provider import generate_with_groq
-from app.logger import logging
-from app.exception import MyException
-import sys
+"""
+LLM Router — tries Groq first, falls back to OpenAI.
+Usage:  from app.llm.router import llm_router
+        text = llm_router.generate(prompt)
+"""
+from app.llm.groq_provider import GroqProvider
+from app.llm.openai_provider import OpenAIProvider
+from app.utils.logger import logger
+from app.utils.exception import AgentException
 
 
-def generate_text(prompt: str):
-    try:
-        logging.info("Trying Groq LLM...")
-        return generate_with_groq(prompt)
+class LLMRouter:
+    """Tries providers in order; raises AgentException if all fail."""
 
-    except Exception as e:
-        logging.warning("Groq failed, switching to OpenAI...", exc_info=True)
+    def __init__(self):
+        self._providers = [GroqProvider(), OpenAIProvider()]
 
-        try:
-            logging.info("Trying OpenAI LLM...")
-            return generate_with_openai(prompt)
+    def generate(self, prompt: str) -> str:
+        last_error = None
+        for provider in self._providers:
+            try:
+                return provider.generate(prompt)
+            except Exception as e:
+                logger.warning("Provider %s failed: %s — trying next", provider.name, e)
+                last_error = e
 
-        except Exception as e2:
-            logging.error("Both Groq and OpenAI failed", exc_info=True)
-            raise MyException(e2, sys)
+        raise AgentException(last_error or RuntimeError("All LLM providers failed"))
+
+
+llm_router = LLMRouter()
