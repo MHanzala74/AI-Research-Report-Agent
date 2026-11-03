@@ -50,41 +50,7 @@ The AI Research Report Agent automates the process of researching a topic and ge
 
 ## 🏗️ Pipeline Architecture
 
-```
-Query Input
-     │
-     ▼
-┌──────────────────────────────────────────────────┐
-│              FastAPI Application                  │
-│   POST /api/v1/research/generate                  │
-└──────────────────┬───────────────────────────────┘
-                   │
-                   ▼
-┌──────────────────────────────────────────────────┐
-│            LangGraph Pipeline                     │
-│                                                   │
-│  ┌─────────────┐    ┌──────────────┐    ┌──────────────────┐ │
-│  │  Researcher  │───▶│ Synthesizer  │───▶│  Report Builder  │ │
-│  │             │    │             │    │                  │ │
-│  │ Tavily web  │    │ LLM summary │    │ LLM full report  │ │
-│  │ search      │    │ of snippets │    │ with structure   │ │
-│  └─────────────┘    └──────────────┘    └──────────────────┘ │
-└──────────────────────────────────────────────────┘
-                   │
-                   ▼
-┌──────────────────────────────────────────────────┐
-│              LLM Router                           │
-│   1. Groq (llama-3.3-70b) ← primary              │
-│   2. OpenAI (gpt-4o-mini) ← automatic fallback   │
-└──────────────────────────────────────────────────┘
-                   │
-                   ▼
-        ReportResponse (JSON)
-        ├── report   (full markdown)
-        ├── summary  (condensed)
-        ├── sources  (list of URLs)
-        └── query    (original input)
-```
+![AI Research Report Agent Architecture](docs/architecture.svg)
 
 ---
 
