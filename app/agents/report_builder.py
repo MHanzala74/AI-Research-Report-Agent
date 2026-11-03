@@ -1,54 +1,30 @@
-from app.llm.router import generate_text
+"""
+Report Builder node — generates the final structured report.
+"""
+from pathlib import Path
 from app.agents.state import AgentState
-from app.logger import logging
-from app.exception import MyException
-import sys
+from app.llm.router import llm_router
+from app.utils.logger import logger
+from app.utils.exception import AgentException
+
+_PROMPT_TEMPLATE = (Path(__file__).parent.parent.parent / "prompts" / "report_builder.md").read_text()
 
 
 def report_builder_node(state: AgentState) -> AgentState:
-    try:
-        logging.info("Report Builder Node started")
+    logger.info("▶ Report Builder node started")
 
-        summary = state.get("summary", "")
-        query = state.get("query", "")
+    summary = state.get("summary", "")
+    query   = state.get("query", "")
 
-        if not query:
-            raise ValueError("Query is missing in state")
+    if not summary:
+        raise AgentException(ValueError("Summary is empty — cannot build report"))
 
-        prompt = f"""
-        You are an expert research assistant.
+    prompt = _PROMPT_TEMPLATE.format(query=query, summary=summary)
+    report = llm_router.generate(prompt)
 
-        Create a professional, detailed, and well-structured report.
+    if not report:
+        raise AgentException(ValueError("LLM returned an empty report"))
 
-        Topic: {query}
-
-        Summary:
-        {summary}
-
-        Instructions:
-        - Write in clear academic style
-        - Add headings
-        - Expand key points with explanations
-        - Keep it concise but informative
-
-        Structure:
-        1. Introduction
-        2. Key Points (with headings)
-        3. Conclusion
-        """
-
-        logging.info("Generating report using LLM...")
-        report = generate_text(prompt)
-
-        if not report:
-            raise ValueError("Empty response from LLM")
-
-        state["final_reports"] = report
-
-        logging.info("Report generated successfully")
-
-        return state
-
-    except Exception as e:
-        logging.error("Error in report_builder_node", exc_info=True)
-        raise MyException(e, sys)
+    state["final_report"] = report
+    logger.info("✔ Report Builder node done | report_len=%d", len(report))
+    return state
